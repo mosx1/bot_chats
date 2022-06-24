@@ -16,7 +16,7 @@ import calendar
 
 
 
-token = '5039865293:AAHUtyFYxOYrkFppyKJGQhAGXaatPjCh4-8'
+token = ''
 bot = telebot.TeleBot(token)
 
 
