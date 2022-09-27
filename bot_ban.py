@@ -17,8 +17,8 @@ import calendar
 import asyncio
 
 
-#'1727195415:AAHuFPGxae30xXpGe8feL6sdsy5pb0m5rAU'
-token = '5039865293:AAHUtyFYxOYrkFppyKJGQhAGXaatPjCh4-8'
+
+token = ''
 #
 bot = telebot.TeleBot(token)
 
@@ -357,8 +357,8 @@ class Travel:
         self.qty_places = 4
         self.init_qty = 0
         self.init_text = ""
-        self.clid = "ak220909"
-        self.apikey = "DptuFxzhpvQBGEcXDZfGTkvKGXQppJeDXCdql"
+        self.clid = ""
+        self.apikey = ""
         self.UB = "37.597252,55.555616"
         self.An = "37.599157,55.583953"
         self.BDD = "37.577116,55.570182"
