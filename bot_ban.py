@@ -39,7 +39,7 @@ class Censure:
         self.taxi_button_list = {} #для обьектов такси
         self.all_message = "\n\n_При поддержке канала [Про лизинг](https://t.me/leasing4bis)_"
         self.admin_chat = ""
-        self.channel_id = "" #-1001158441558 - id новостей ЮБ
+        self.channel_id = "" 
         self.public = {}
         self.public_info_user = {}
 
