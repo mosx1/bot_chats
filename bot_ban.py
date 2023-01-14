@@ -1,24 +1,16 @@
-from decimal import ExtendedContext
-from shutil import ExecError
-from subprocess import call
-from requests.models import Response
 import telebot
 import json
 import requests
-import sys
-import re
 import time
 import threading, time
 from telebot import types
-import string
 from datetime import datetime
 import pytz
-import calendar
 import logging
+from pymystem3 import Mystem
 
-
-token = '' #test
-
+token = '1727195415:AAHuFPGxae30xXpGe8feL6sdsy5pb0m5rAU' #test
+#token = '5039865293:AAHUtyFYxOYrkFppyKJGQhAGXaatPjCh4-8'
 
 bot = telebot.TeleBot(token)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -34,14 +26,18 @@ class Censure:
 
     def __init__(self):
         self.chat_filter_mat = []
-        self.mat_list = ["хуй", "пизд", "залупа", "ебаный", "ебать", "ебал", " бля ", "ебать", "ебать", "ебут", "еблан", "ебнул", "шлюха", "гандон", "чурка", "хуесос", "уебище", "блядст", "пидр", "пидор"]
+        self.mat_list = ["хуй", "пизд", "залупа", "ебаный", "ебать", "ебал", " бля ", "ебать", "ебать", "ебут", "еблан", "ебнул", "шлюха", "гандон", "чурка", "хуесос", "уебище", "блядст", "пидр", "пидор", "шлюх", "пиздос"]
         self.escaped_characters = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
         self.taxi_button_list = {} #для обьектов такси
-        self.all_message = ""
+        self.all_message = "" #реклама
         self.admin_chat = ""
         self.channel_id = "" #-1001158441558 - id новостей ЮБ
         self.public = {}
         self.public_info_user = {}
+        self.message_text_user_info = ""
+        self.message_caption_user_info = ""
+        self.message_text = ""
+        self.message_caption = ""
 
     def filter_mat(self, message):
         i = 0
@@ -78,216 +74,103 @@ class Censure:
         key.add(botton_yes_user)
         key.add(botton_yes_not_user,botton_no)
         self.public[message.id] = message
-        message_caption = self.formating_text_markdownv2(message.caption)
-        if str(message_caption) == "None":
-            message_caption = ""
+        user_info = "\n\nАвтор: [" + str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")) + "](tg://user?id\=" + str(message.from_user.id) + ")"
+        if message.text != None:
+            self.message_text = self.formating_text_markdownv2(message.text)
+            if self.message_text == None:
+                self.message_text_user_info = user_info
+                logging.info(str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")) + " предложил пост")
+            elif self.test_commercia(self.message_text) == True:
+                self.message_text_user_info = self.message_text + user_info + "\n\n#реклама"
+                logging.info(str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")) + " предложил рекламный пост")
+            else:
+                self.message_text_user_info = self.message_text + user_info
+                logging.info(str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")) + " предложил пост")
+        else:
+            self.message_caption = self.formating_text_markdownv2(message.caption)
+            if self.message_caption == None:
+                self.message_caption_user_info = user_info
+                logging.info(str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")) + " предложил пост")
+            elif self.test_commercia(self.message_caption) == True:
+                self.message_caption_user_info = self.message_caption + user_info + "\n\n#реклама"
+                logging.info(str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")) + " предложил рекламный пост")
+            else:
+                self.message_caption_user_info = self.message_caption + user_info
+                logging.info(str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")) + " предложил пост")
+
         try:
-            self.public_info_user[message.id] = bot.send_video(self.admin_chat, video=self.public[message.id].video.file_id, caption=message_caption + "\n\nАвтор: [" + str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")) + "](tg://user?id\=" + str(message.from_user.id) + ")", reply_markup=key, parse_mode="MarkdownV2")
+            self.public_info_user[message.id] = bot.send_video(self.admin_chat, video=self.public[message.id].video.file_id, caption=self.message_caption_user_info, reply_markup=key, parse_mode="MarkdownV2")
             logging.info("Предложена публикация пользователем: " + str(message.from_user.first_name) + " " + str(message.from_user.last_name))
             return
         except Exception:
             pass
         try:
-            self.public_info_user[message.id] = bot.send_photo(self.admin_chat, photo=self.public[message.id].photo[0].file_id, caption=message_caption  + "\n\nАвтор: [" + str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")) + "](tg://user?id\=" + str(message.from_user.id) + ")", reply_markup=key, parse_mode="MarkdownV2")
+            self.public_info_user[message.id] = bot.send_photo(self.admin_chat, photo=self.public[message.id].photo[0].file_id, caption=self.message_caption_user_info, reply_markup=key, parse_mode="MarkdownV2")
         except Exception:
             if message.text != "/start":
-                self.public_info_user[message.id] = bot.send_message(self.admin_chat, message.text + "\n\nАвтор: [" + str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")) + "](tg://user?id\=" + str(message.from_user.id) + ")", reply_markup=key, parse_mode="MarkdownV2")
+                self.public_info_user[message.id] = bot.send_message(self.admin_chat, self.message_text_user_info, reply_markup=key, parse_mode="MarkdownV2")
         logging.info("Предложена публикация пользователем: " + str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")))
 
 
     def public_news(self, info_user, id):
         if info_user == True:
-            message = self.public_info_user[id]
+            caption = self.message_caption_user_info
+            text = self.message_text_user_info
         elif info_user == False:
-            message = self.public[id]
+            caption = self.message_caption
+            text = self.message_text
         elif info_user == None:
             bot.delete_message(chat_id = str(self.admin_chat), message_id = self.public_info_user[id].id)
             return
         try:
-            bot.send_video(self.channel_id, video=message.video.file_id, caption=message.caption, parse_mode="MarkdownV2")
+            bot.send_video(self.channel_id, video=self.public_info_user[id].video.file_id, caption=caption, parse_mode="MarkdownV2")
         except Exception:
             pass
         try:
-            bot.send_photo(self.channel_id, photo=message.photo[0].file_id, caption=message.caption, parse_mode="MarkdownV2")
+            bot.send_photo(self.channel_id, photo=self.public_info_user[id].photo[0].file_id, caption=caption, parse_mode="MarkdownV2")
         except Exception:
-            bot.send_message(self.channel_id, message.text, parse_mode="MarkdownV2")
+            bot.send_message(self.channel_id, text, parse_mode="MarkdownV2")
         logging.info("Публикация одобрена")
-        bot.delete_message(chat_id = self.admin_chat, message_id = self.public_info_user[id].id)
+        bot.delete_message(chat_id = str(self.admin_chat), message_id = self.public_info_user[id].id)
         del self.public_info_user[id]
         del self.public[id]
 
-
-class Bus:
-
-
-    def __init__(self):
-        self.list_chats_bus = []
-        self.only_time = []
-        self.chat_id = 0
-        self.user_id = 0
-        self.list_message_bus = {}
-        self.old_message_time_bus_id = 0
-        self.schedule = "https://t.me/c/1665635878/7253" #ссылка на сообщение с расписанием
-
-    def real_time(self):
-        moscow_time_full = datetime.now(pytz.timezone('Europe/Moscow'))
-        moscow_time = str(moscow_time_full).split(' ')
-        m_time = moscow_time[1][:5]
-        only_time = m_time.split(':')
-        only_time.append(moscow_time_full.weekday())
-        return only_time
-
-
-    def run_time_bus(self, message, correct=None, ls_time=None):
-        i = 0
-        while i==0:
-            moment_time = self.real_time()
-            if int(moment_time[0]) >= 6 and int(moment_time[0]) <= 23:
-                if int(moment_time[2]) <=4:
-                    short_pause = 840
-                    long_pause = 1140
-                    one = 6
-                else:
-                    short_pause = 1140
-                    long_pause = 1740
-                    one = 7
-                for chat_id in self.list_chats_bus:
-                    pass
-                    #self.bus_time(message,chat_id, short_pause, long_pause, one)
-            time.sleep(20)
-
-    def bus_time(self, message, chat_id, short_pause, long_pause, one):
-        keybord = types.InlineKeyboardMarkup()
-        submit = types.InlineKeyboardButton(text = "Смотреть расписание", url = self.schedule)
-        botton_yandex = types.InlineKeyboardButton(text = "Найти на ЯКартах", url="""https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwjUhLLXrpn4AhVjmIsKHVF4CcYQFnoECB4QAQ&url=https%3A%2F%2Fyandex.ru%2Fmaps%2F1%2Fmoscow-and-moscow-oblast%2Froutes%2Fminibus_1141%2F796d617073626d313a2f2f7472616e7369742f6c696e653f69643d32303336393235303130266c6c3d33372e35393339343225324335352e353730313937266e616d653d3131343126723d3237303726747970653d6d696e69627573%2F&usg=AOvVaw3uIrCOOfpFrKaj0eqrmGh7""")
-        keybord.add(submit, botton_yandex)
-        self.only_time = self.real_time()
-        while int(self.only_time[0]) >= one and int(self.only_time[0]) < 12:
-            if int(self.only_time[0]) == 11 and int(self.only_time[1]) == 30:
-                print("last bus in metro")
-                old_message2 = bot.send_message(chat_id, str("Маршрутка отправляется от метро. ПЕРЕРЫВ. Сделующая 13:00"), reply_markup=keybord)
-                break
-            print("6-12")
-            short_pause_text = str((short_pause + 60) / 60)
-            old_message = bot.send_message(chat_id, str("Маршрутка отправляется от ЖК. Следующая через " + short_pause_text[:2] + " минут."), reply_markup=keybord)
-            time.sleep(short_pause)
-            bot.delete_message(chat_id = chat_id, message_id= old_message.id)
-            self.only_time = self.real_time()
-        
-        if int(self.only_time[0]) == 12 and int(self.only_time[1]) == 0:
-            old_message = bot.send_message(chat_id, str("Маршрутка отправляется от ЖК. ПЕРЕРЫВ. Следующая в ~13:10."), reply_markup=keybord)
-            time.sleep(3610)
-            bot.delete_message(chat_id = chat_id, message_id= old_message.id)
-
-
-        
-        while int(self.only_time[0]) >= 13 and int(self.only_time[0]) < 15:
-            print("13-15")
-            long_pause_text = str((long_pause + 60) / 60)
-            old_message = bot.send_message(chat_id, str("Маршрутка отправляется от Метро. Следующая через " + long_pause_text[:2] + " минут."), reply_markup=keybord)
-            time.sleep(long_pause)
-            bot.delete_message(chat_id = chat_id, message_id= old_message.id)
-            self.only_time = self.real_time()
-        
-        while int(self.only_time[0]) >= 15 and int(self.only_time[0]) < 22:
-            if int(self.only_time[0]) == 21 and int(self.only_time[1]) >= 40:
-                print("21:40")
-                old_message = bot.send_message(chat_id, "Последняя маршрутка отправляется от ЖК. ", reply_markup=keybord)
-                pause = 60 - int(self.only_time[1]) + 1
-                time.sleep(pause)
-                break
-            print("15-22")
-            short_pause_text = str((short_pause + 60) / 60)
-            old_message = bot.send_message(chat_id, str("Маршрутка отправляется от Метро. Следующая через " + short_pause_text[:2] + " минут"), reply_markup=keybord)
-            time.sleep(short_pause)
-            bot.delete_message(chat_id = chat_id, message_id= old_message.id)
-            self.only_time = self.real_time()
-        
-        if int(self.only_time[0]) == 22:
-            print("22:00")
-            botton_taxi = types.InlineKeyboardButton(text="Заказать такси", url="https://taxi.yandex.ru/")
-            keybord.add(botton_taxi)
-            old_message = bot.send_message(chat_id, "Последняя маршрутка отправляется от Метро.", reply_markup=keybord)
-            time.sleep(6600)
-            bot.delete_message(chat_id = chat_id, message_id= old_message.id)
-
-
-    def bus_time_botton(self, message):
-        try:
-            bot.delete_message(chat_id = message.chat.id, message_id = self.old_message_time_bus_id.id)
-        except Exception:
-            pass
-        nik = str(message.from_user.username)
-        if nik == "None":
-            nik = ""
-        else:
-            nik = "\n@" + nik
-        moment_time = self.real_time()
-        if message.text == "От метро":
-            one = 5
-            two = 0
-        elif message.text == "От ЖК":
-            one = 0
-            two = 5
-        vector = message.text
-        if int(moment_time[0]) == 12:
-            key = types.InlineKeyboardMarkup()
-            botton_timetable = types.InlineKeyboardButton(text = "Смотреть расписание", url = self.schedule)
-            botton_taxi = types.InlineKeyboardButton(text="Заказать такси", url="https://taxi.yandex.ru/")
-            key.add(botton_timetable, botton_taxi)
-            bot.delete_message(chat_id = message.chat.id, message_id=message.id)
-            self.old_message_time_bus_id = bot.send_message(message.chat.id, str(message.from_user.first_name) + ", перерыв до 13:00"+ nik, reply_markup=key)
+    def spam_message(self, message):
+        list_admin = [i.user.id for i in bot.get_chat_administrators(message.chat.id)]
+        if message.from_user.id not in list_admin:
+            bot.delete_message(chat_id=message.chat.id, message_id=message.id)
+            old_message = bot.send_message(message.chat.id, "Вы не администратор. Действите запрещено")
+            time.sleep(5)
+            bot.delete_message(chat_id=message.chat.id, message_id=old_message.id)
             return
-        elif int(moment_time[2]) <=4:
-            if int(moment_time[0]) <= 6 and int(moment_time[0]) >= 23:
-                key = types.InlineKeyboardMarkup()
-                botton_timetable = types.InlineKeyboardButton(text = "Смотреть расписание", url = self.schedule)
-                botton_taxi = types.InlineKeyboardButton(text="Заказать такси", url="https://taxi.yandex.ru/")
-                key.add(botton_timetable, botton_taxi)
-                bot.delete_message(chat_id = message.chat.id, message_id=message.id)
-                self.old_message_time_bus_id= bot.send_message(message.chat.id, str(message.from_user.first_name) + ", в это время машрутка не ходит." + nik, reply_markup=key)
-                return
-            elif int(moment_time[0]) >= 6 and int(moment_time[0]) < 12:
-                left_min = 15 - ((int(moment_time[1]) + one) % 15)
-            elif int(moment_time[0]) >= 13 and int(moment_time[0]) < 15:
-                left_min = 20 - ((int(moment_time[1]) + two) % 20)
-            elif int(moment_time[0]) >= 15 and int(moment_time[0]) < 23:
-                left_min = 15 - ((int(moment_time[1]) + two) % 15)
-                if int(moment_time[0]) == 22 and int(moment_time[1]) >= 40 and message.text == "От ЖК":
-                    bot.delete_message(chat_id = message.chat.id, message_id=message.id)
-                    self.old_message_time_bus_id = bot.send_message(message.chat.id, str(message.from_user.first_name) +", в это время машрутка не ходит." + nik, reply_markup=key)
-                    return
+        arr_message = message.text.split(" ", 1)
+        if len(arr_message) != 2:
+            old_message = bot.send_message(message.chat.id, """Напшите сообщение в формате "/spam Тут ваш текст". """)
+            time.sleep(5)
+            bot.delete_message(chat_id=message.chat.id, message_id=old_message.id)
         else:
-            if int(moment_time[0]) < 7 and int(moment_time[0]) >= 23:
-                key = types.InlineKeyboardMarkup()
-                botton_timetable = types.InlineKeyboardButton(text = "Смотреть расписание", url = self.schedule)
-                botton_taxi = types.InlineKeyboardButton(text="Заказать такси", url="https://taxi.yandex.ru/")
-                key.add(botton_timetable, botton_taxi)
-                bot.delete_message(chat_id = message.chat.id, message_id=message.id)
-                self.old_message_time_bus_id = bot.send_message(message.chat.id, str(message.from_user.first_name) + ", в это время машрутка не ходит." +  nik, reply_markup=key)
-                return
-            elif int(moment_time[0]) >= 7 and int(moment_time[0]) < 23: #тут 15 было в место 7
-                left_min = 20 - ((int(moment_time[1]) + two) % 20)
-                if int(moment_time[0]) == 22 and int(moment_time[1]) >= 40 and message.text == "От ЖК":
-                    key = types.InlineKeyboardMarkup()
-                    botton_timetable = types.InlineKeyboardButton(text = "Смотреть расписание", url = self.schedule)
-                    botton_taxi = types.InlineKeyboardButton(text="Заказать такси", url="https://taxi.yandex.ru/")
-                    key.add(botton_timetable, botton_taxi)
-                    bot.delete_message(chat_id = message.chat.id, message_id=message.id)
-                    self.old_message_time_bus_id = bot.send_message(message.chat.id, str(message.from_user.first_name) + ", в это время машрутка не ходит." +  nik, reply_markup=key)
-                    return
-        keybord = types.InlineKeyboardMarkup()
-        submit = types.InlineKeyboardButton(text = "Смотреть расписание", url = self.schedule)
-        botton_yandex = types.InlineKeyboardButton(text = "Найти на ЯКартах", url="""https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&cad=rja&uact=8&ved=2ahUKEwjUhLLXrpn4AhVjmIsKHVF4CcYQFnoECB4QAQ&url=https%3A%2F%2Fyandex.ru%2Fmaps%2F1%2Fmoscow-and-moscow-oblast%2Froutes%2Fminibus_1141%2F796d617073626d313a2f2f7472616e7369742f6c696e653f69643d32303336393235303130266c6c3d33372e35393339343225324335352e353730313937266e616d653d3131343126723d3237303726747970653d6d696e69627573%2F&usg=AOvVaw3uIrCOOfpFrKaj0eqrmGh7""")
-        keybord.add(submit, botton_yandex)
-        bot.delete_message(chat_id = message.chat.id, message_id=message.id)
-        self.old_message_time_bus_id = bot.send_message(message.chat.id, str(message.from_user.first_name) + ", мaршруткa " + vector + " будет через " + str(left_min) + " мин." +  nik, reply_markup=keybord)
-        return
-
-
+            logging.info("Запущена рассылка для чатов пользователем " + str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")))
+            self.spam_text = arr_message[1]
+            bot.delete_message(chat_id=message.chat.id, message_id=message.id)
+            spam_work_tread = threading.Thread(target = self.spam_work)
+            spam_work_tread.start()
     
-                  
 
+    def spam_work(self):
+        for i in user_chat_kik[0].list_chats.keys():
+            bot.send_message(i, self.spam_text + censure_filter.all_message)
+    
+
+    def test_commercia(message):
+        m = Mystem()
+        message_text = m.lemmatize(message.text)
+        list_commercia = ["услуга", "подключение", "производство", "продажа"]
+        for text_commercia in list_commercia:
+            if text_commercia in message_text:
+                return "Внимание, в вашем сообщении найдены признаки коммерческой рекламы. Для размещения рекламы в нашем канале обратитесь к [Максиму](tg://user?id\=474425142)"
+        return "Ваша публикация отправлена админам. Вероятно скоро они её опубликуют."
+
+                  
 thread = threading.Thread(target = updateConnect)
 thread.start()
 
@@ -306,7 +189,7 @@ class Kik_user:
         self.id = 0
 
 
-    def start_kik(self, message, userid=None):
+    def start_kik(self, message):
         self.chat_id = message.chat.id
         self.chat_title = message.chat.title
         bot.delete_message(chat_id=self.chat_id, message_id=message.id)
@@ -324,57 +207,61 @@ class Kik_user:
             logging.error(self.initiator + " вызвал команду кик не ответив на сообщение, error: " + e)
             return False
         else:
-            try:
-                bot.delete_message(chat_id=self.chat, message_id=self.message)
-            except Exception:
-                logging.error("Не удалось удалить сообщение о кике пользователя")
             self.username = censure_filter.formating_text_markdownv2(str(message.reply_to_message.from_user.first_name) + " " + str((message.reply_to_message.from_user.last_name or "")))
-            self.useridgolos = 0
-            self.qty_yes = 0
-            self.qty_no = 0
-            self.list_user = []
+            self.list_yes = []
+            self.list_no = []
             self.list_admin = []
             self.initiator = message.from_user.id
             self.del_message_id = str(message.reply_to_message.id)
             #self.survey()
 
-    def survey(self, kik_id):
-        if self.useridgolos in self.list_user:
-            pass
+    def survey(self, kik_id, call=None, voice=None):
+        if (call != None) and (call.from_user.id in self.list_no + self.list_yes):
+            bot.answer_callback_query(callback_query_id=call.id, text='Вы уже проголосовали')
         else:
-            self.list_user.append(self.useridgolos)
-            if self.qty_yes >= 2:
+            if voice == False:
+                self.list_no.append(int(call.from_user.id))
+            elif voice == True:
+                self.list_yes.append(int(call.from_user.id))
+            status_chat_user = bot.get_chat_member(self.chat_id, self.userid)
+            if status_chat_user.status == "left" or status_chat_user.status == "kicked":
+                text = "Пользователь [" + censure_filter.formating_text_markdownv2(self.username) + "](tg://user?id\=" + str(self.userid) + ") покинул чат, либо его кикнул администратор\. Голосование окончено\."
+                try:
+                    bot.edit_message_text(chat_id=self.chat_id, message_id=self.survey_message.id, text=text, parse_mode="MarkdownV2")
+                except AttributeError:
+                    bot.send_message(self.chat_id, text, parse_mode="MarkdownV2")
+                return
+            if len(self.list_yes) >= 10:
                 bot.kick_chat_member(self.chat_id, self.userid)
-                bot.delete_message(chat_id=self.chat_id, message_id=self.del_message_id)
                 stat.add_qty_message()
-                bot.send_message(self.chat_id, "По решению соседей из " + self.chat_title +  " кикнут [" + str(self.username) + "](tg://user?id\=" + str(self.userid) + ")" + censure_filter.all_message, parse_mode="MarkdownV2")
+                bot.edit_message_text(chat_id=self.chat_id, message_id=self.survey_message.id, text="По решению соседей из " + censure_filter.formating_text_markdownv2(self.chat_title) +  " кикнут [" + censure_filter.formating_text_markdownv2(self.username) + "](tg://user?id\=" + str(self.userid) + ")" + censure_filter.all_message, parse_mode="MarkdownV2")
                 logging.info("Пользователя " + self.username + " кикнули из чата " + self.chat_title + " голосованием.")
-                return
-            elif self.qty_no >= 2:
-                bot.delete_message(chat_id=self.chat_id, message_id=self.del_message_id)
+                return "end_survey"
+            elif len(self.list_no) >= 10:
                 stat.add_qty_message()
-                bot.send_message(self.chat_id, "По решению соседей [" + str(self.username) + "](tg://user?id\=" + str(self.userid) + ") остается в чате\." + censure_filter.all_message, parse_mode="MarkdownV2")
+                bot.edit_message_text(chat_id=self.chat_id, message_id=self.survey_message.id, text="По решению соседей [" + censure_filter.formating_text_markdownv2(self.username) + "](tg://user?id\=" + str(self.userid) + ") остается в чате\." + censure_filter.all_message, parse_mode="MarkdownV2")
                 logging.info("Пользователя " + self.username + " не кикнули из чата " + self.chat_title + " голосованием.")
-                return
+                return "end_survey"
             survey_keyvboard = types.InlineKeyboardMarkup()
-            Botton_yes = types.InlineKeyboardButton(text = f"Да ({self.qty_yes})", callback_data='{"key": "kik_yes", "id": "' + str(kik_id) + '"}')
-            Botton_no = types.InlineKeyboardButton(text = f"Нет ({self.qty_no})", callback_data='{"key": "kik_no", "id": "' + str(kik_id) + '"}')
+            Botton_yes = types.InlineKeyboardButton(text = f"Да ({len(self.list_yes)})", callback_data='{"key": "kik_yes", "id": "' + str(kik_id) + '"}')
+            Botton_no = types.InlineKeyboardButton(text = f"Нет ({len(self.list_no)})", callback_data='{"key": "kik_no", "id": "' + str(kik_id) + '"}')
             survey_keyvboard.add(Botton_yes, Botton_no)
-            kik_text = "Кикнуть [" + str(self.username)+ "](tg://user?id\=" + str(self.userid) + ") \?" + censure_filter.all_message
-            if self.qty_yes == 0 and self.qty_no == 0:
-                stat.add_qty_message()
-                self.survey_message = bot.send_message(self.chat_id, kik_text, reply_markup=survey_keyvboard, parse_mode="MarkdownV2")
+            kik_text = "Кикнуть [" + censure_filter.formating_text_markdownv2(self.username)+ "](tg://user?id\=" + str(self.userid) + ") \?"
+            if len(self.list_yes) == 0 and len(self.list_no) == 0:
+                self.survey_message = bot.send_message(self.chat_id, kik_text, reply_markup=survey_keyvboard, parse_mode="MarkdownV2", timeout=2)
             else:
                 bot.edit_message_text(chat_id=self.chat_id, message_id=self.survey_message.id, text=kik_text, reply_markup=survey_keyvboard, parse_mode="MarkdownV2")
 
 
-    def armagedon(self):
+    def armagedon(self, user=None):
+        if user == None:
+            user = self.userid
         keyword_ban = types.InlineKeyboardMarkup()
         Botton_all_chats = types.InlineKeyboardButton(text = "Удалить из всех чатов", callback_data='{"key": "ban_all", "chat": "all"}')
         keyword_ban.add(Botton_all_chats)
         for id in self.list_chats.keys():
             try:
-                status_chat_user = bot.get_chat_member(id, self.userid)
+                status_chat_user = bot.get_chat_member(id, user)
                 if "left, kicked".count(status_chat_user.status) != 0:
                     continue
                 title = self.list_chats[id]["title"]
@@ -382,10 +269,10 @@ class Kik_user:
                 keyword_ban.add(Botton)
             except Exception:
                 logging.error("Пользователь не смог вызвать команду армагедон.")
-        bot.send_message(self.chat, "Выберите в каком чате вы хотите заблокировать пользователя [" + str(self.username) + "](tg://user?id\=" + str(self.userid) + "):", reply_markup=keyword_ban, parse_mode="MarkdownV2")
+        bot.send_message(self.chat_id, "Выберите в каком чате вы хотите заблокировать пользователя [" + str(self.username) + "](tg://user?id\=" + str(self.userid) + "):", reply_markup=keyword_ban, parse_mode="MarkdownV2")
     
     
-    def ban_user(self, chat_id):
+    def ban_user(self, chat_id, user=None):
         if chat_id == "all":
             for chat in self.list_chats.keys():
                 try:
@@ -393,12 +280,12 @@ class Kik_user:
                 except Exception:
                     pass
             stat.add_qty_message()
-            bot.send_message(self.chat, "[" + str(self.username) + "](tg://user?id\=" + str(self.userid) + ") забанен из всех чатов" + censure_filter.all_message, parse_mode="MarkdownV2")
+            bot.send_message(self.chat_id, "[" + str(self.username) + "](tg://user?id\=" + str(self.userid) + ") забанен из всех чатов" + censure_filter.all_message, parse_mode="MarkdownV2")
             logging.info(self.username + " забанен из всех чатов.")
         else:
             bot.ban_chat_member(chat_id, self.userid)
             stat.add_qty_message()
-            bot.send_message(self.chat, "[" + str(self.username) + "](tg://user?id\=" + str(self.userid) + ") забанен из чата " + self.list_chats[chat_id]['title'] + censure_filter.all_message, parse_mode="MarkdownV2")
+            bot.send_message(self.chat_id, "[" + str(self.username) + "](tg://user?id\=" + str(self.userid) + ") забанен из чата " + self.list_chats[chat_id]['title'] + censure_filter.all_message, parse_mode="MarkdownV2")
             logging.info(self.username + " забанен из чата "+ self.list_chats[chat_id]['title'])
 
     def filter_message(self, message):
@@ -442,17 +329,13 @@ class Travel:
             if int(self.init_qty) - len(self.join_users_id) > 0:
                 self.join_users_id.append("[" + str(str(message.from_user.first_name) + " " + (str(message.from_user.last_name) or "")) + "](tg://user?id\=" + str(message.from_user.id) + ")")
             else:
-                old_message_1 = bot.send_message(self.init_chat, "[" + censure_filter.formating_text_markdownv2(str(str(message.from_user.first_name) + " " + str(message.from_user.last_name))) + "](tg://user?id\=" + str(self.init_user_id) + "), мест в этой поездке больше нет\.", reply_to_message_id=self.message_id_g, parse_mode='MarkdownV2')
-                time.sleep(5)
-                bot.delete_message(chat_id=old_message_1.chat.id, message_id=old_message_1.id)
+                bot.answer_callback_query(callback_query_id=message.id, text='Мест нет.')
                 return
         elif tap == "taxi-":
             try:
                 self.join_users_id.remove("[" + censure_filter.formating_text_markdownv2(str(message.from_user.first_name) + " " + (str(message.from_user.last_name) or "")) + "](tg://user?id\=" + str(message.from_user.id) + ")")
             except Exception:
-                old_message_2 = bot.send_message(self.init_chat, "[" + censure_filter.formating_text_markdownv2(str(message.from_user.first_name) + " " + str(message.from_user.last_name)) + "](tg://user?id\=" + str(self.init_user_id) + "), вы не учавствовали в этой поездке\.", reply_to_message_id=self.message_id_g, parse_mode='MarkdownV2')
-                time.sleep(5)
-                bot.delete_message(chat_id=old_message_2.chat.id, message_id=old_message_2.id)
+                bot.answer_callback_query(callback_query_id=message.id, text='Вы не учавствовали в этой поездке.')
                 return       
         elif message != None:
             self.init_user_id = message.from_user.id
@@ -485,6 +368,7 @@ class Travel:
             bot.delete_message(chat_id=message.chat.id, message_id=message.id)
             stat.add_qty_message()
             self.message_id_g = bot.send_message(self.init_chat, text_message_edit, parse_mode='MarkdownV2', reply_markup=key)
+            bot.pin_chat_message(chat_id=self.message_id_g.chat.id, message_id=self.message_id_g.id)
             logging.info(self.init_user_name + " создал поездку")
             
 
@@ -606,6 +490,43 @@ class Statistik:
         self.qty_chats += 1
 
     
+class ConfigPanel:
+    
+
+    def __init__(self):
+        self.user_id = 0
+    
+
+    def list_chats(self, message):
+        list_admin = [i.user.id for i in bot.get_chat_administrators(message.chat.id)]
+        if message.from_user.id in list_admin or message.from_user.id == 474425142:
+            pass
+        else:
+            bot.send_message(message.chat.id, f"{message.from_user.username}, вы не администратор группы")
+            return
+
+        #file_chats_config = open("chats_config.txt", "w+")
+        keyboard_admin = types.InlineKeyboardMarkup()
+
+        for id in user_chat_kik[0].list_chats.keys():
+                try:
+                    status_chat_user = bot.get_chat_member(id, message.from_user.id)
+                    if "left, kicked".count(status_chat_user.status) != 0:
+                        continue
+                    title = user_chat_kik[0].list_chats[id]["title"]
+                    Botton = types.InlineKeyboardButton(text = title, callback_data='{"key": "admin_config", "chat":' + str(id) + '}')
+                    keyboard_admin.add(Botton)
+                except Exception:
+                    logging.error(str(message.from_user.first_name) + " не смог вызвать панель администратора.")
+        bot.send_message(message.from_user.id, "Вычерите чат для настройки:", reply_markup=keyboard_admin)
+        #file_chats_config.close()
+
+
+        def config_chat(self, chat):
+            keyboard_config_chat = types.InlineKeyboardMarkup()
+            chat = user_chat_kik[0].list_chats[chat]
+            bot.send_message(self.user.id, "Настройка параметров чата " + chat["title"], reply_markup=keyboard_config_chat)
+
 
 stat = Statistik()
 user_chat_kik = {}
@@ -653,19 +574,23 @@ def mat_on(message):
 @bot.message_handler(commands=['admin_news'])
 def admin_news(message):
     censure_filter.admin_chat = message.chat.id
+    bot.delete_message(chat_id=message.chat.id, message_id=message.id)
     bot.send_message(message.chat.id, "Чат зарегистрирован как чат для предложений новостей")
 
 
 @bot.message_handler(commands=['kik'])
 def test(message):
-    user_chat_kik[message.reply_to_message.chat.id + message.reply_to_message.from_user.id] = Kik_user()
-    res_start = user_chat_kik[message.reply_to_message.chat.id + message.reply_to_message.from_user.id].start_kik(message)
-    if res_start == False:
-        return
+    if (message.reply_to_message.chat.id + message.reply_to_message.from_user.id) not in user_chat_kik.keys():
+        user_chat_kik[message.reply_to_message.chat.id + message.reply_to_message.from_user.id] = Kik_user()
+        res_start = user_chat_kik[message.reply_to_message.chat.id + message.reply_to_message.from_user.id].start_kik(message)
+        if res_start == False:
+            return
+        else:
+            user_chat_kik[message.reply_to_message.chat.id + message.reply_to_message.from_user.id].survey(message.reply_to_message.chat.id + message.reply_to_message.from_user.id)
     else:
-        user_chat_kik[message.reply_to_message.chat.id + message.reply_to_message.from_user.id].survey(message.reply_to_message.chat.id + message.reply_to_message.from_user.id)
-
-        
+        old_message = bot.send_message(message.chat.id, "Голосование уже создано. Найдите его в чате и проголосуйте.")
+        time.sleep(5)
+        bot.delete_message(chat_id = old_message.chat.id, message_id= old_message.id)
 
 
 @bot.message_handler(commands=['ban_all'])
@@ -675,41 +600,44 @@ def choice_method(message):
     if len(arr_message_text) == 1:
         ban_all_chats(message)
     else:
-        bot.send_message(message.chat.id, "Неверный формат данных.")
+        old_message = bot.send_message(message.chat.id, "Неверная команда.")
+        time.sleep(5)
+        bot.delete_message(chat_id = old_message.chat.id, message_id= old_message.id)
     
 
 
 def ban_all_chats(message):
-    user_chat_kik.start_kik(message)
+    user_chat_kik[0].start_kik(message)
     list_admin = [i.user.id for i in bot.get_chat_administrators(message.chat.id)]
-    if user_chat_kik.userid in list_admin:
+    if user_chat_kik[0].userid in list_admin:
         stat.add_qty_message()
-        bot.send_message(message.chat.id, f"Невозможно забанить администратора группы" + censure_filter.all_message, pars_mode="MarkdownV2")
+        bot.send_message(message.chat.id, f"Невозможно забанить администратора группы" + censure_filter.all_message, parse_mode="MarkdownV2")
     elif message.from_user.id in list_admin:
-        user_chat_kik.armagedon()
+        user_chat_kik[0].armagedon()
     else:
         stat.add_qty_message()
-        bot.send_message(message.chat.id, f"{message.from_user.username} Вы не администратор группы" + censure_filter.all_message, pars_mode="MarkdownV2")
+        bot.send_message(message.chat.id, f"{message.from_user.username} Вы не администратор группы" + censure_filter.all_message, parse_mode="MarkdownV2")
 
 
 #включаем проверку остальных чатов для выявления машенников в барахолке
 @bot.message_handler(commands=['no_to_swindlers'])
 def no_to_swindlers(message):
     list_admin = [i.user.id for i in bot.get_chat_administrators(message.chat.id)]
-    if message.from_user.id in list_admin:
+    if message.from_user.id in list_admin or message.from_user.id == 474425142:
         message_chat_id = message.chat.id
         bot.delete_message(chat_id = message.chat.id, message_id= message.id)
-        if message.chat.id in user_chat_kik.check_chats:
-            user_chat_kik.check_chats.remove(message.chat.id)
+        if message.chat.id in user_chat_kik[0].check_chats:
+            user_chat_kik[0].check_chats.remove(message.chat.id)
             old_message = bot.send_message(message_chat_id, "Выключен фильтр спам сообщений")
             time.sleep(5)
             bot.delete_message(chat_id = old_message.chat.id, message_id= old_message.id)
+            logging.info("Выключен фильтр спам сообщений в чате " + message.chat.title)
         else:
-            user_chat_kik.check_chats.append(message.chat.id)
+            user_chat_kik[0].check_chats.append(message.chat.id)
             old_message = bot.send_message(message_chat_id, "Включен фильтр спам сообщений")
             time.sleep(5)
             bot.delete_message(chat_id = old_message.chat.id, message_id= old_message.id)
-            logging.info("Включен фильтр спам сообщений")
+            logging.info("Включен фильтр спам сообщений в чате " + message.chat.title)
     else:
         bot.send_message(message.chat.id, f"{message.from_user.username}, вы не администратор группы")
     
@@ -718,9 +646,14 @@ def no_to_swindlers(message):
 def print_all_chats(message):
     bot.delete_message(chat_id = message.chat.id, message_id= message.id)
     text = "All chats:\n"
-    for i in user_chat_kik.list_chats:
-        text += "[" + censure_filter.formating_text_markdownv2(user_chat_kik.list_chats[i]['title']) + "](tg://user?id\=" + str(user_chat_kik.list_chats[i]['id']) + ")\n"
+    for i in user_chat_kik[0].list_chats:
+        text += "[" + censure_filter.formating_text_markdownv2(user_chat_kik[0].list_chats[i]['title']) + "](tg://chat?id\=" + str(user_chat_kik[0].list_chats[i]['id']) + ")\n"
     bot.send_message(message.chat.id, text, parse_mode="MarkdownV2")
+
+
+@bot.message_handler(commands=["spam"])
+def spam_message(message):
+    censure_filter.spam_message(message)
 
 
 @bot.message_handler(commands=["statistic"])
@@ -737,9 +670,24 @@ def new_post(message):
     bot.delete_message(message.chat.id, message.id)
     censure_filter.channel_id = message.chat.id
     key_offer = types.InlineKeyboardMarkup()
-    botton_offer = types.InlineKeyboardButton(text="Предложить новость", url="https://t.me/lol_chat_bitca_bot")
+    botton_offer = types.InlineKeyboardButton(text="Прислать новость", url="https://t.me/lol_chat_bitca_bot")
     key_offer.add(botton_offer)
-    bot.send_message(censure_filter.channel_id, "Дорогие соседи, теперь можно предложить новость о нашем ЖК. Для этого нажмите кнопку под этим постом или прямо в закрепленных сообщениях, запустите бота и напишите ему то, что вы хотите предложить опубликовать. После проверки администраторами вашей публикации - пост будет размещен. В некоторых случаях аннонимно, в некоторых нет.\nВажно:\nК сожалению по техническим причинам, в публикации пока что может быть только одно фото или видео и текст или просто текст.", reply_markup=key_offer)
+    bot.send_message(censure_filter.channel_id, "Дорогие соседи,\nтеперь можно предложить новость о нашем ЖК. Для этого нажмите кнопку под этим постом или прямо в закрепленных сообщениях, запустите бота и напишите ему то, что вы хотите предложить опубликовать. После проверки администраторами вашей публикации - пост будет размещен. В некоторых случаях аннонимно, в некоторых нет.\nВажно:\nПо техническим причинам, в публикации пока что может быть только одно фото или видео и текст или просто текст.", reply_markup=key_offer)
+
+
+@bot.message_handler(commands=["добавить"])
+def add_chat(message):
+    bot.delete_message(message.chat.id, message.id)
+    #проверяем является ли бот администратором и вызвал ли команду пользователь, который подтвердил, что будет настраивать чаты.
+    bot.send_message(message.from_user.id, "Чат " + censure_filter.formating_text_markdownv2(message.chat.title) + " добавлен", parse_mode="MarkdownV2")
+
+
+@bot.message_handler(commands=["новость"])
+def offer_news_message(message):
+    censure_filter.offer_news(message.reply_to_message)
+    old_message = bot.send_message(message.chat.id, "Предложена новость")
+    time.sleep(5)
+    bot.delete_message(chat_id=old_message.chat.id, message_id=old_message.id)
 
 
 @bot.message_handler(commands=["start"])
@@ -749,12 +697,18 @@ def start(message):
         return
 
 
+@bot.message_handler(commands=["admin_config"])
+def admin_panel(message):
+    config_chats = ConfigPanel() #возможно лучше сделать через
+
+
 @bot.message_handler(content_types=['text'])
 def collection_data(message):
     if message.chat.type == "private":
         censure_filter.offer_news(message)
         return
     if message.text == "Ищу_попутчиков_в_такси":
+        bot.delete_message(chat_id=message.chat.id, message_id=message.id)
         taxi_list[message.from_user.id] = Travel()
         taxi_list[message.from_user.id].taxi(message)
     if message.chat.id in user_chat_kik[0].list_chats:
@@ -764,13 +718,11 @@ def collection_data(message):
             "id": message.chat.id, 
             "title" : message.chat.title
         }
-        
     if len(user_chat_kik[0].check_chats) != 0:
         if message.chat.id in user_chat_kik[0].check_chats:
             user_chat_kik[0].filter_message(message)
     censure_filter.filter_mat(message)
-    if message.chat.type == "private":
-        bot.send_message(message.from_user.id, "Ваша публикация отправлена админам. Вероятно скоро они её опубликуют.")
+        
     
 
 @bot.message_handler(content_types=['photo'])
@@ -780,13 +732,16 @@ def coll_data(message):
         return
     if len(user_chat_kik[0].check_chats) != 0:
         if message.chat.id in user_chat_kik[0].check_chats:
-            user_chat_kik.filter_message(message)
+            user_chat_kik[0].filter_message(message)
 
 
 @bot.message_handler(content_types=['video'])
 def coll_data(message):
     if message.chat.type == "private":
         censure_filter.offer_news(message)
+        bot.send_message(message.from_user.id, censure_filter.formating_text_markdownv2("Напоминаем, что проходит конкурс на звание лучшего фильма (не более 3х минут) о нашем ЖК. Выбирать лучший будем голосованием. Победители, вошедшие в тройку лидеров получат материальный приз. Какой? Узнаем по итогам розыгрыша :) ") + censure_filter.all_message, parse_mode="MarkdownV2")
+        stat.add_qty_message()
+        #if message.video.duration < 181 вероятно так можно проверить длинну видео. надо потестить.
         return
 
 
@@ -794,19 +749,24 @@ def coll_data(message):
 def callback_woker(call):
     call_data_json = call.data
     call_data = json.loads(call_data_json)
-    logging.info(str(call.from_user.id) + " " + str(call.from_user.first_name) + " " + str((call.from_user.last_name or "")) + " нажата кнопка с ключем " + call_data['key'])
+    logging.info("chat: " + str(call.chat.title) + ", user:" + str(call.from_user.first_name) + " " + str((call.from_user.last_name or "")) + " нажата кнопка с ключем " + call_data['key'])
     
     if call_data['key'] == "kik_yes":
-        user_chat_kik[int(call_data['id'])].qty_yes += 1
-        user_chat_kik[int(call_data['id'])].useridgolos = call.from_user.id
-        user_chat_kik[int(call_data['id'])].survey(call_data['id'])
+        res = user_chat_kik[int(call_data['id'])].survey(call_data['id'], call=call, voice=True)
+        if res == "end_survey":
+            del user_chat_kik[int(call_data['id'])]
     elif call_data['key'] == "kik_no":
-        user_chat_kik[int(call_data['id'])].qty_no += 1
-        user_chat_kik[int(call_data['id'])].useridgolos = call.from_user.id
-        user_chat_kik[int(call_data['id'])].survey(call_data['id'])
+        res = user_chat_kik[int(call_data['id'])].survey(call_data['id'], call=call, voice=False)
+        if res == "end_survey":
+            del user_chat_kik[int(call_data['id'])]
     elif call_data['key'] == "ban_all":
-        if user_chat_kik.initiator == call.from_user.id:
-            user_chat_kik.ban_user(call_data['chat'])
+        if call.from_user.id in [i.user.id for i in bot.get_chat_administrators(call.chat.id)]:
+            user_chat_kik[0].ban_user(call_data['chat'])
+            bot.answer_callback_query(callback_query_id=call.id, text='Пользователь забанен в выбранном чате.', show_alert=True)
+            logging.info(str(call.from_user.first_name) + " " + str((call.from_user.last_name or "")) + " забанил пользователя в чате.")
+        else:
+            bot.answer_callback_query(callback_query_id=call.id, text='Вы не администратор группы.')
+            logging.error(str(call.from_user.first_name) + " " + str((call.from_user.last_name or "")) + " не смог забанить пользователя. Недостаточно прав.")
     elif call_data['key'] == "taxi+" or call_data['key'] == "taxi-":
         obj_id = call_data['id']
         taxi_list[int(obj_id)].taxi(message = call, tap = call_data['key'])
@@ -836,9 +796,10 @@ def callback_woker(call):
         censure_filter.public_news(False, int(call_data['id']))
     elif call_data['key'] == "botton_not_public":
         censure_filter.public_news(None, int(call_data['id']))
+    elif call_data['key'] == "admin_config":
+        pass
     else:
-        bot.send_message(call.from_user.id,
-                            text='Эта кнопка еще не настроена')
+        bot.answer_callback_query(callback_query_id=call.id, text='Кнопка еще не настроена.')
 
 
 
