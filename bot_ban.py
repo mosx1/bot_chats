@@ -1,4 +1,3 @@
-import telebot
 import json
 import requests
 import time
@@ -8,17 +7,13 @@ from datetime import datetime
 import pytz
 import logging
 from pymystem3 import Mystem
+from connect import bot
 
-#token = '1727195415:AAHuFPGxae30xXpGe8feL6sdsy5pb0m5rAU' #test
-token = '5039865293:AAHUtyFYxOYrkFppyKJGQhAGXaatPjCh4-8'
 
-bot = telebot.TeleBot(token)
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-def updateConnect():
-    while True:
-        api = requests.post(f"https://api.telegram.org/bot/{token}/getUpdates".format(token))
-        time.sleep(10)
+
 
 
 class Censure:
@@ -176,8 +171,7 @@ class Censure:
         return False, "Ваша публикация отправлена админам\. Вероятно скоро они её опубликуют\."
 
                   
-thread = threading.Thread(target = updateConnect)
-thread.start()
+
 
 
 class Kik_user:
