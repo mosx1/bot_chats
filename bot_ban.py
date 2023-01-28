@@ -7,13 +7,7 @@ from datetime import datetime
 import pytz
 import logging
 from pymystem3 import Mystem
-from connect import bot
-
-
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-
-
+from connect import bot, logging
 
 
 class Censure:
