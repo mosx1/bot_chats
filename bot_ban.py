@@ -196,7 +196,7 @@ class Kik_user:
     def start_kik(self, message):
         self.chat_id = message.chat.id
         self.chat_title = message.chat.title
-        self.chat_member_count_golos = bot.get_chat_member_count(chat_id=message.chat.id) // 100 #вычисляем % пользователей
+        self.chat_member_count_golos = bot.get_chat_member_count(chat_id=message.chat.id) // 101 #вычисляем % пользователей
         bot.delete_message(chat_id=self.chat_id, message_id=message.id)
         try:
             self.userid = message.reply_to_message.from_user.id
@@ -798,7 +798,6 @@ def callback_woker(call):
 
 @bot.poll_handler(lambda p: True)
 def handle_poll(PollOption):
-    print(PollOption.options[0])
     status_chat_user = bot.get_chat_member(user_chat_kik[PollOption.id].chat_id, user_chat_kik[PollOption.id].userid)
     if status_chat_user.status == "left" or status_chat_user.status == "kicked":
         text = "Пользователь [" + censure_filter.formating_text_markdownv2(user_chat_kik[PollOption.id].username) + "](tg://user?id\=" + str(user_chat_kik[PollOption.id].userid) + ") покинул чат, либо его кикнул администратор\. Голосование окончено\."
