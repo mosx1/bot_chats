@@ -1,285 +1,12 @@
 import json
 import requests
 import time
-import threading, time
+import time
 from telebot import types
-from datetime import datetime
-import pytz
 import logging
-from pymystem3 import Mystem
-from connect import bot, logging
-
-
-class Censure:
-
-
-    def __init__(self):
-        self.chat_filter_mat = []
-        self.mat_list = ["хуй", "пизд", "залупа", "ебаный", "ебать", "ебал", " бля ", "ебать", "ебать", "ебут", "еблан", "ебнул", "шлюха", "гандон", "чурка", "хуесос", "уебище", "блядст", "пидр", "пидор", "шлюх", "пиздос"]
-        self.escaped_characters = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
-        self.taxi_button_list = {} #для обьектов такси
-        self.all_message = "" #реклама
-        self.admin_chat = ""
-        self.channel_id = "" #-1001158441558 - id новостей ЮБ
-        self.public = {}
-        self.public_info_user = {}
-        self.message_text_user_info = ""
-        self.message_caption_user_info = ""
-        self.message_text = ""
-        self.message_caption = ""
-
-    def filter_mat(self, message):
-        i = 0
-        message_text = str(message.text).lower()
-        for mat in self.mat_list:
-            if mat in message_text:
-                #if message.chat.id in self.chat_filter_mat:
-                message_text = message_text.replace(mat, "*" * len(mat))
-                i += 1
-        if i > 0 :
-            bot.delete_message(chat_id = message.chat.id, message_id= message.id)
-            text = "Пользователь [" + self.formating_text_markdownv2(str(message.from_user.first_name)) + self.formating_text_markdownv2(str((message.from_user.last_name or ""))) + "](tg://user?id\=" + str(message.from_user.id) + ") писал: \n " + self.formating_text_markdownv2(message_text) + censure_filter.all_message
-            stat.add_qty_message()
-            bot.send_message(message.chat.id, text, parse_mode="MarkdownV2")
-            logging.info("Сработал фильтр мата на пользователя " + str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")))
-    
-    
-    def formating_text_markdownv2(self, message_text):
-        for escaped_characters in self.escaped_characters:
-            try:
-                if escaped_characters in message_text:
-                    message_text = str(message_text).replace(escaped_characters, "\\" + escaped_characters)
-            except TypeError:
-                logging.error("Переданное сообщение не является текстом")
-                break
-        return message_text
-    
-
-    def offer_news(self, message):
-        key = types.InlineKeyboardMarkup()
-        botton_yes_not_user = types.InlineKeyboardButton(text="Опубликовать", callback_data='{"key": "botton_yes_not_user", "id":"' + str(message.id) + '"}')
-        botton_yes_user = types.InlineKeyboardButton(text="Обупликовать с автором", callback_data='{"key": "botton_yes_user", "id":"' + str(message.id) + '"}')
-        botton_no = types.InlineKeyboardButton(text="Удалить", callback_data='{"key": "botton_not_public", "id":"' + str(message.id) + '"}')
-        key.add(botton_yes_user)
-        key.add(botton_yes_not_user,botton_no)
-        self.public[message.id] = message
-        user_info = "\n\nАвтор: [" + str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")) + "](tg://user?id\=" + str(message.from_user.id) + ")"
-        if message.text != None:
-            self.message_text = self.formating_text_markdownv2(message.text)
-            test_commercia = self.test_commercia(self.message_text)
-            if self.message_text == None:
-                self.message_text_user_info = user_info
-                logging.info(str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")) + " предложил пост")
-            elif test_commercia[0] == True:
-                self.message_text_user_info = self.message_text + user_info + "\n\n\#реклама"
-                bot.send_message(message.from_user.id, test_commercia[1], parse_mode="MarkdownV2")
-                logging.info(str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")) + " предложил рекламный пост")
-            else:
-                self.message_text_user_info = self.message_text + user_info
-                bot.send_message(message.from_user.id, test_commercia[1], parse_mode="MarkdownV2")
-                logging.info(str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")) + " предложил пост")
-        else:
-            self.message_caption = self.formating_text_markdownv2(message.caption)
-            test_commercia = self.test_commercia(self.message_caption)
-            if self.message_caption == None:
-                self.message_caption_user_info = user_info
-                logging.info(str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")) + " предложил пост")
-            elif test_commercia[0] == True:
-                self.message_caption_user_info = self.message_caption + user_info + "\n\n\#реклама"
-                bot.send_message(message.from_user.id, test_commercia[1], parse_mode="MarkdownV2")
-                logging.info(str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")) + " предложил рекламный пост")
-            else:
-                self.message_caption_user_info = self.message_caption + user_info
-                bot.send_message(message.from_user.id, test_commercia[1], parse_mode="MarkdownV2")
-                logging.info(str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")) + " предложил пост")
-
-        try:
-            self.public_info_user[message.id] = bot.send_video(self.admin_chat, video=self.public[message.id].video.file_id, caption=self.message_caption_user_info, reply_markup=key, parse_mode="MarkdownV2")
-            logging.info("Предложена публикация пользователем: " + str(message.from_user.first_name) + " " + str(message.from_user.last_name))
-            return
-        except Exception:
-            pass
-        try:
-            self.public_info_user[message.id] = bot.send_photo(self.admin_chat, photo=self.public[message.id].photo[0].file_id, caption=self.message_caption_user_info, reply_markup=key, parse_mode="MarkdownV2")
-        except Exception:
-            if message.text != "/start":
-                self.public_info_user[message.id] = bot.send_message(self.admin_chat, self.message_text_user_info, reply_markup=key, parse_mode="MarkdownV2")
-        logging.info("Предложена публикация пользователем: " + str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")))
-
-
-    def public_news(self, info_user, id):
-        if info_user == True:
-            caption = self.message_caption_user_info
-            text = self.message_text_user_info
-        elif info_user == False:
-            caption = self.message_caption
-            text = self.message_text
-        elif info_user == None:
-            bot.delete_message(chat_id = str(self.admin_chat), message_id = self.public_info_user[id].id)
-            return
-        try:
-            bot.send_video(self.channel_id, video=self.public_info_user[id].video.file_id, caption=caption, parse_mode="MarkdownV2")
-        except Exception:
-            try:
-                bot.send_photo(self.channel_id, photo=self.public_info_user[id].photo[0].file_id, caption=caption, parse_mode="MarkdownV2")
-            except Exception:
-                bot.send_message(self.channel_id, text, parse_mode="MarkdownV2")
-        logging.info("Публикация одобрена")
-        bot.delete_message(chat_id = str(self.admin_chat), message_id = self.public_info_user[id].id)
-        del self.public_info_user[id]
-        del self.public[id]
-
-    def spam_message(self, message):
-        list_admin = [i.user.id for i in bot.get_chat_administrators(message.chat.id)]
-        if message.from_user.id not in list_admin:
-            bot.delete_message(chat_id=message.chat.id, message_id=message.id)
-            old_message = bot.send_message(message.chat.id, "Вы не администратор. Действите запрещено")
-            time.sleep(5)
-            bot.delete_message(chat_id=message.chat.id, message_id=old_message.id)
-            return
-        arr_message = message.text.split(" ", 1)
-        if len(arr_message) != 2:
-            old_message = bot.send_message(message.chat.id, """Напшите сообщение в формате "/spam Тут ваш текст". """)
-            time.sleep(5)
-            bot.delete_message(chat_id=message.chat.id, message_id=old_message.id)
-        else:
-            logging.info("Запущена рассылка для чатов пользователем " + str(message.from_user.first_name) + " " + str((message.from_user.last_name or "")))
-            self.spam_text = arr_message[1]
-            bot.delete_message(chat_id=message.chat.id, message_id=message.id)
-            spam_work_tread = threading.Thread(target = self.spam_work)
-            spam_work_tread.start()
-    
-
-    def spam_work(self):
-        for i in user_chat_kik[0].list_chats.keys():
-            bot.send_message(i, self.spam_text + censure_filter.all_message)
-    
-
-    def test_commercia(self, message):
-        m = Mystem()
-        message_text = m.lemmatize(message)
-        list_commercia = ["услуга", "подключение", "производство", "продажа", "установка", "дешево", "цена"]
-        for text_commercia in list_commercia:
-            if text_commercia in message_text:
-                return True, "Внимание\, в вашем сообщении найдены признаки коммерческой рекламы\. Для размещения рекламы в нашем канале обратитесь к [Максиму](tg://user?id\=474425142)"
-        return False, "Ваша публикация отправлена админам\. Вероятно скоро они её опубликуют\."
-
-                  
-
-
-
-class Kik_user:
-
-    def __init__(self):
-        self.reply_to_message_id = 0
-        self.list_chats = {}
-        self.list_user = []
-        self.initiator = ""
-        self.username = ""
-        self.check_chats = []
-        self.id = 0
-        
-
-
-    def start_kik(self, message):
-        self.chat_id = message.chat.id
-        self.chat_title = message.chat.title
-        self.chat_member_count_golos = bot.get_chat_member_count(chat_id=message.chat.id) // 101 #вычисляем % пользователей
-        bot.delete_message(chat_id=self.chat_id, message_id=message.id)
-        try:
-            self.userid = message.reply_to_message.from_user.id
-            self.list_admin = [i.user.id for i in bot.get_chat_administrators(message.chat.id)]
-            if self.userid in self.list_admin:
-                stat.add_qty_message()
-                bot.send_message(self.chat_id, "Невозможно кикнуть администратора группы" + censure_filter.all_message, parse_mode="MarkdownV2")
-                bot.delete_message(chat_id=self.chat_id, message_id=self.id)
-                logging.info(self.initiator + " пытался кикнуть администратора")
-                return False
-        except Exception as e:
-            logging.error(self.initiator + " вызвал команду кик не ответив на сообщение, error: " + e)
-            return False
-        else:
-            self.username = censure_filter.formating_text_markdownv2(str(message.reply_to_message.from_user.first_name) + " " + str((message.reply_to_message.from_user.last_name or "")))
-            self.list_yes = []
-            self.list_no = []
-            self.list_admin = []
-            self.initiator = message.from_user.id
-            self.del_message_id = str(message.reply_to_message.id)
-    
-    
-    def kik_yes(self):
-        bot.kick_chat_member(self.chat_id, self.userid)
-        stat.add_qty_message()
-        bot.send_message(chat_id=self.chat_id, text="По решению соседей из " + censure_filter.formating_text_markdownv2(self.chat_title) +  " кикнут [" + censure_filter.formating_text_markdownv2(self.username) + "](tg://user?id\=" + str(self.userid) + ")" + censure_filter.all_message, parse_mode="MarkdownV2")
-        bot.delete_message(chat_id=self.chat_id, message_id=self.id)
-        logging.info("Пользователя " + self.username + " кикнули из чата " + self.chat_title + " голосованием.")
-
-
-    def kik_no(self):
-        stat.add_qty_message()
-        bot.send_message(chat_id=self.chat_id, text="По решению соседей [" + censure_filter.formating_text_markdownv2(self.username) + "](tg://user?id\=" + str(self.userid) + ") остается в чате\." + censure_filter.all_message, parse_mode="MarkdownV2")
-        bot.delete_message(chat_id=self.chat_id, message_id=self.id)
-        logging.info("Пользователя " + self.username + " не кикнули из чата " + self.chat_title + " голосованием.")
-
-    def kik_del_mes(self):
-        bot.delete_message(chat_id=self.chat_id, message_id=self.reply_to_message_id) #удаляем сообщение пользователя
-        bot.delete_message(chat_id=self.chat_id, message_id=self.id) #удаляем голосование
-        logging.info("Сообщение пользователя " + self.username + " удалили из чата " + self.chat_title + " голосованием.")
-
-    def armagedon(self, user=None):
-        if user == None:
-            user = self.userid
-        keyword_ban = types.InlineKeyboardMarkup()
-        Botton_all_chats = types.InlineKeyboardButton(text = "Удалить из всех чатов", callback_data='{"key": "ban_all", "chat": "all"}')
-        keyword_ban.add(Botton_all_chats)
-        for id in self.list_chats.keys():
-            try:
-                status_chat_user = bot.get_chat_member(id, user)
-                if "left, kicked".count(status_chat_user.status) != 0:
-                    continue
-                title = self.list_chats[id]["title"]
-                Botton = types.InlineKeyboardButton(text = title, callback_data='{"key": "ban_all", "chat":' + str(id) + '}')
-                keyword_ban.add(Botton)
-            except Exception:
-                logging.error("Пользователь не смог вызвать команду армагедон.")
-        bot.send_message(self.chat_id, "Выберите в каком чате вы хотите заблокировать пользователя [" + str(self.username) + "](tg://user?id\=" + str(self.userid) + "):", reply_markup=keyword_ban, parse_mode="MarkdownV2")
-    
-    
-    def ban_user(self, chat_id, user=None):
-        if chat_id == "all":
-            for chat in self.list_chats.keys():
-                try:
-                    bot.ban_chat_member(chat, self.userid)
-                except Exception:
-                    pass
-            stat.add_qty_message()
-            bot.send_message(self.chat_id, "[" + str(self.username) + "](tg://user?id\=" + str(self.userid) + ") забанен из всех чатов" + censure_filter.all_message, parse_mode="MarkdownV2")
-            logging.info(self.username + " забанен из всех чатов.")
-        else:
-            bot.ban_chat_member(chat_id, self.userid)
-            stat.add_qty_message()
-            bot.send_message(self.chat_id, "[" + str(self.username) + "](tg://user?id\=" + str(self.userid) + ") забанен из чата " + self.list_chats[chat_id]['title'] + censure_filter.all_message, parse_mode="MarkdownV2")
-            logging.info(self.username + " забанен из чата "+ self.list_chats[chat_id]['title'])
-
-    def filter_message(self, message):
-        qty_chat = 0
-        list_chats = []
-        for id in self.list_chats.keys():
-            status_chat_user = bot.get_chat_member(id, message.from_user.id)
-            if status_chat_user.status != "left" and status_chat_user.status != "kicked":
-                list_chats.append(self.list_chats[id]["title"])
-                qty_chat += 1              
-        if qty_chat == 1:
-            logging.info("Удалено сообщение пользователя " + str(message.from_user.first_name))
-            bot.delete_message(chat_id=message.chat.id, message_id=message.id)
-        else:
-            text = ""
-            for i in list_chats:
-                if i == None:
-                    continue
-                text += " " + str(i)
-            logging.info("Пользователь " + str(message.from_user.first_name) + str(message.from_user.last_name) + " есть в следующих чатах: " + text)
-
+from connect import bot, logging, censure_filter, stat, user_chat_kik
+from chess_neighbors import Chess_neighbots
+from Kik_user import Kik_user
 
 class Travel:
 
@@ -430,39 +157,6 @@ class Travel:
         return text_yandex_info
 
 
-class Statistik:
-    def __init__(self):
-        self.qty_message = 0
-        self.qty_chats = 0
-        self.qty_users = 0
-        self.data = {}
-        self.day_message = 9
-        self.qty_day = 0
-        self.all_message = 0
-        self.mean_qty_message = 0
-
-
-    def real_time(self):
-        moscow_time_full = datetime.now(pytz.timezone('Europe/Moscow'))
-        moscow_time = str(moscow_time_full).split(' ')
-        m_time = moscow_time[1][:5]
-        only_time = m_time.split(':')
-        only_time.append(moscow_time_full.weekday())
-        return only_time
-
-
-    def add_qty_message(self):
-        real_time = self.real_time()
-        if real_time[2] != self.day_message:
-            self.day_message = real_time[2]
-            self.qty_day += 1
-        self.all_message += 1
-        self.mean_qty_message = self.all_message // self.qty_day
-
-
-    def add_qty_chat(self):
-        self.qty_chats += 1
-
     
 class ConfigPanel:
     
@@ -502,12 +196,15 @@ class ConfigPanel:
             bot.send_message(self.user.id, "Настройка параметров чата " + chat["title"], reply_markup=keyboard_config_chat)
 
 
-
-stat = Statistik()
-user_chat_kik = {}
-user_chat_kik[0] = Kik_user()
-censure_filter = Censure()
+chess = {}
 taxi_list = {}
+
+
+@bot.message_handler(commands=['шахматка'])
+def add_chess(message):
+    chess[message.from_user.id] = Chess_neighbots()
+    chess[message.from_user.id].addUser_in_chess(message)
+
 
 
 @bot.message_handler(commands=['tb'])
@@ -628,7 +325,7 @@ def print_all_chats(message):
 
 @bot.message_handler(commands=["spam"])
 def spam_message(message):
-    censure_filter.spam_message(message)
+    user_chat_kik[0].spam_message(message)
 
 
 @bot.message_handler(commands=["statistic"])
@@ -668,6 +365,10 @@ def offer_news_message(message):
 @bot.message_handler(commands=["start"])
 def start(message):
     if message.chat.type == "private":
+        b = types.InlineKeyboardButton("Перейти", web_app=types.WebAppInfo('https://google.ru'))
+        a = types.InlineKeyboardMarkup()
+        a.add(b)
+        bot.send_message(message.chat.id, "test", reply_markup=a)
         bot.send_message(message.from_user.id, "Присылайте мне новости. Админ проверит и опубликует их.")
         return
 
@@ -731,15 +432,7 @@ def callback_woker(call):
     call_data = json.loads(call_data_json)
     logging.info("chat: " + str(call.message.chat.title) + ", user:" + str(call.from_user.first_name) + " " + str((call.from_user.last_name or "")) + " нажата кнопка с ключем " + call_data['key'])
     
-    if call_data['key'] == "kik_yes":
-        res = user_chat_kik[int(call_data['id'])].survey(call_data['id'], call=call, voice=True)
-        if res == "end_survey":
-            del user_chat_kik[int(call_data['id'])]
-    elif call_data['key'] == "kik_no":
-        res = user_chat_kik[int(call_data['id'])].survey(call_data['id'], call=call, voice=False)
-        if res == "end_survey":
-            del user_chat_kik[int(call_data['id'])]
-    elif call_data['key'] == "ban_all":
+    if call_data['key'] == "ban_all":
         if call.from_user.id in [i.user.id for i in bot.get_chat_administrators(call.message.chat.id)]:
             user_chat_kik[0].ban_user(call_data['chat'])
             bot.delete_message(message_id=call.message.id, chat_id=call.message.chat.id)
@@ -777,6 +470,23 @@ def callback_woker(call):
         censure_filter.public_news(False, int(call_data['id']))
     elif call_data['key'] == "botton_not_public":
         censure_filter.public_news(None, int(call_data['id']))
+    elif call_data['key'] == "add_chess":
+        if call.from_user.id in chess:
+            chess[call.from_user.id].add_user(call)
+        else:
+            bot.answer_callback_query(callback_query_id=call.id, text='Нет доступа')
+    elif call_data['key'] == "no_edit_chess":
+        if call.from_user.id in chess:
+            bot.delete_message(call.message.chat.id, call.message.id)
+            del chess[call.from_user.id]
+        else:
+            bot.answer_callback_query(callback_query_id=call.id, text='Нет доступа')
+    elif call_data['key'] == "edit_chess":
+        list_admin = [i.user.id for i in bot.get_chat_administrators(call.message.chat.id)]
+        if call.from_user.id in list_admin or call.from_user.id == 474425142:
+            chess[call.from_user.id].edit_user(call)
+        else:
+            bot.answer_callback_query(callback_query_id=call.id, text='Обратитесь к администатору для изменения')
     elif call_data['key'] == "admin_config":
         pass
     else:
