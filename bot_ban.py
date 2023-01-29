@@ -382,7 +382,7 @@ def admin_panel(message):
 @bot.message_handler(content_types=['text'])
 def collection_data(message):
     #test
-    
+    bot.send_message(message.chat.id, '<a href="https://t.me/pasha_pich">test</a> ', parse_mode="html", disable_web_page_preview=True)
 
     if message.chat.type == "private":
         censure_filter.offer_news(message)
