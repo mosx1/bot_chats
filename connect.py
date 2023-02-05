@@ -1,8 +1,8 @@
 import telebot, time, requests, threading, logging
 from Statistik import Statistik
 
-token = '1727195415:AAHuFPGxae30xXpGe8feL6sdsy5pb0m5rAU' #test
-#token = '5039865293:AAHUtyFYxOYrkFppyKJGQhAGXaatPjCh4-8'
+token = '' #test
+#token = ''
 bot = telebot.TeleBot(token)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 stat = Statistik
