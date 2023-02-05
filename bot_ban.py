@@ -200,11 +200,29 @@ chess = {}
 taxi_list = {}
 
 
-@bot.message_handler(commands=['шахматка'])
+@bot.message_handler(commands=['шахматка', 'chess'])
 def add_chess(message):
-    chess[message.from_user.id] = Chess_neighbots()
-    chess[message.from_user.id].addUser_in_chess(message)
+    list_admin = [i.user.id for i in bot.get_chat_administrators(message.chat.id)]
+    if message.from_user.id in list_admin or message.from_user.id == 474425142:
+        chess[message.from_user.id] = Chess_neighbots()
+        chess[message.from_user.id].addUser_in_chess(message)
+    else:
+        old_message = bot.send_message(chat_id = message.chat.id, reply_to_message_id=message.id, text="Вы можете попросить администратора отметить вас в шахматке.")
+        time.sleep(5)
+        bot.delete_message(old_message.chat.id, old_message.id)
+        bot.delete_message(message.chat.id, message.id)
 
+
+@bot.message_handler(commands=['найти'])
+def search(message):
+    chess[message.from_user.id] = Chess_neighbots()
+    chess[message.from_user.id].searchUsers(message)
+
+
+@bot.message_handler(commands=['авто'])
+def add_avto(message):
+    chess[message.from_user.id] = Chess_neighbots()
+    chess[message.from_user.id].add_Avto(message)
 
 
 @bot.message_handler(commands=['tb'])
@@ -381,8 +399,6 @@ def admin_panel(message):
 
 @bot.message_handler(content_types=['text'])
 def collection_data(message):
-    #test
-    bot.send_message(message.chat.id, '<a href="https://t.me/pasha_pich">test</a> ', parse_mode="html", disable_web_page_preview=True)
 
     if message.chat.type == "private":
         censure_filter.offer_news(message)
@@ -485,6 +501,17 @@ def callback_woker(call):
         list_admin = [i.user.id for i in bot.get_chat_administrators(call.message.chat.id)]
         if call.from_user.id in list_admin or call.from_user.id == 474425142:
             chess[call.from_user.id].edit_user(call)
+        else:
+            bot.answer_callback_query(callback_query_id=call.id, text='Обратитесь к администатору для изменения')
+    elif call_data['key'] == "add_avto":
+        if call.from_user.id in chess:
+            chess[call.from_user.id].add_num_avto(call)
+        else:
+            bot.answer_callback_query(callback_query_id=call.id, text='Нет доступа')
+    elif call_data['key'] == "edit_avto":
+        list_admin = [i.user.id for i in bot.get_chat_administrators(call.message.chat.id)]
+        if call.from_user.id in list_admin or call.from_user.id == 474425142:
+            chess[call.from_user.id].edit_num_avto(call)
         else:
             bot.answer_callback_query(callback_query_id=call.id, text='Обратитесь к администатору для изменения')
     elif call_data['key'] == "admin_config":
