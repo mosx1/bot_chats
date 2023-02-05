@@ -203,5 +203,8 @@ class Chess_neighbots:
             logging.info("Чат: " + message.chat.title + " ; Пользователь: " + message.from_user.first_name + message.from_user.last_name + "; Действите: поиск без результата")
         else:
             for i in users:
-                text += "Дом: " + str(i[0]) + " секция: " + str(i[1]) + " этаж: " + str(i[2]) + " квартира: " + str(i[3]) + "\nконтакт: [" +str(i[4]) + "](tg://user?id\=" + str(i[5]) + ")\n"
+                if len(text_split) == 2:
+                    text += "Контакт владельца авто: [" +str(i[4]) + "](tg://user?id\=" + str(i[5]) + ")\n"
+                else:
+                    text += "Дом: " + str(i[0]) + " секция: " + str(i[1]) + " этаж: " + str(i[2]) + " квартира: " + str(i[3]) + "\nконтакт: [" +str(i[4]) + "](tg://user?id\=" + str(i[5]) + ")\n"
             bot.edit_message_text(chat_id=old_message.chat.id, message_id=old_message.id, text=text, parse_mode="MarkdownV2")
