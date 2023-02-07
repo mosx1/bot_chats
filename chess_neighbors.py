@@ -178,21 +178,21 @@ class Chess_neighbots:
         lines_split = [i.split("-") for i in self.lines]
         if len(text_split) == 5:
             users = [i for i in lines_split if i[0] == text_split[1] and i[1] == text_split[2] and i[2] == text_split[3] and i[3] == text_split[4]]
-            logging.info("Чат: " + message.chat.title + " ; Пользователь: " + message.from_user.first_name + message.from_user.last_name + "; Действите: поиск по квартире.")
+            logging.info("Чат: " + message.chat.title + " ; Пользователь: " + str(message.from_user.first_name) + str(message.from_user.last_name) + "; Действите: поиск по квартире.")
         elif len(text_split) == 4:
             users = [i for i in lines_split if i[0] == text_split[1] and i[1] == text_split[2] and i[2] == text_split[3]]
-            logging.info("Чат: " + message.chat.title + " ; Пользователь: " + message.from_user.first_name + message.from_user.last_name + "; Действите: поиск по этажу.")
+            logging.info("Чат: " + message.chat.title + " ; Пользователь: " + str(message.from_user.first_name) + str(message.from_user.last_name) + "; Действите: поиск по этажу.")
         elif len(text_split) == 3:
             users = [i for i in lines_split if i[0] == text_split[1] and i[1] == text_split[2]]
-            logging.info("Чат: " + message.chat.title + " ; Пользователь: " + message.from_user.first_name + message.from_user.last_name + "; Действите: поиск по секции.")
+            logging.info("Чат: " + message.chat.title + " ; Пользователь: " + str(message.from_user.first_name) + str(message.from_user.last_name) + "; Действите: поиск по секции.")
         elif len(text_split) == 2 and len(text_split[1]) <= 2:
             users = [i for i in lines_split if i[0] == text_split[1]]
-            logging.info("Чат: " + message.chat.title + " ; Пользователь: " + message.from_user.first_name + message.from_user.last_name + "; Действите: поиск по дому.")
+            logging.info("Чат: " + message.chat.title + " ; Пользователь: " + str(message.from_user.first_name) + str(message.from_user.last_name) + "; Действите: поиск по дому.")
         elif len(text_split) == 2 and re.fullmatch(r"^[а-яА-ЯёЁ][0-9]{3}[а-яА-ЯёЁ]{2}[0-9]+$", text_split[1]) != None:
             users = [i for i in lines_split if len(i) == 7 and i[6][:-1].lower() == text_split[1].lower()]
-            logging.info("Чат: " + message.chat.title + " ; Пользователь: " + message.from_user.first_name + message.from_user.last_name + "; Действите: поиск по авто.")
+            logging.info("Чат: " + message.chat.title + " ; Пользователь: " + str(message.from_user.first_name) + str(message.from_user.last_name) + "; Действите: поиск по авто.")
         else:
-            logging.error("Чат: " + message.chat.title + " ; Пользователь: " + message.from_user.first_name + message.from_user.last_name + "; Действите: неверный формат поиска: " + message.text)
+            logging.error("Чат: " + message.chat.title + " ; Пользователь: " + str(message.from_user.first_name) + str(message.from_user.last_name) + "; Действите: неверный формат поиска: " + message.text)
             bot.delete_message(chat_id=message.chat.id, message_id=message.id)
             bot.edit_message_text(chat_id=old_message.chat.id, message_id=old_message.id, text="Неверный формат.")
             time.sleep(5)
@@ -200,10 +200,10 @@ class Chess_neighbots:
             return
         if len(users) == 0:
             bot.edit_message_text(chat_id=old_message.chat.id, message_id=old_message.id, text="Ничего не найдено\.", parse_mode="MarkdownV2")
-            logging.info("Чат: " + message.chat.title + " ; Пользователь: " + message.from_user.first_name + message.from_user.last_name + "; Действите: поиск без результата")
+            logging.info("Чат: " + message.chat.title + " ; Пользователь: " + str(message.from_user.first_name) + str(message.from_user.last_name) + "; Действите: поиск без результата")
         else:
             for i in users:
-                if len(text_split) == 2:
+                if len(text_split) == 2 and re.fullmatch(r"^[а-яА-ЯёЁ][0-9]{3}[а-яА-ЯёЁ]{2}[0-9]+$", text_split[1]) != None:
                     text += "Контакт владельца авто: [" +str(i[4]) + "](tg://user?id\=" + str(i[5]) + ")\n"
                 else:
                     text += "Дом: " + str(i[0]) + " секция: " + str(i[1]) + " этаж: " + str(i[2]) + " квартира: " + str(i[3]) + "\nконтакт: [" +str(i[4]) + "](tg://user?id\=" + str(i[5]) + ")\n"

@@ -149,7 +149,7 @@ class Censure:
     def test_commercia(self, message):
         m = Mystem()
         message_text = m.lemmatize(message)
-        list_commercia = ["услуга", "подключение", "производство", "продажа", "установка", "дешево", "цена"]
+        list_commercia = ["услуга", "подключение", "производство", "продажа", "установка", "дешево", "цена", "приглашать", "предлогать"]
         for text_commercia in list_commercia:
             if text_commercia in message_text:
                 return True, "Внимание\, в вашем сообщении найдены признаки коммерческой рекламы\. Для размещения рекламы в нашем канале обратитесь к [Максиму](tg://user?id\=474425142)"
